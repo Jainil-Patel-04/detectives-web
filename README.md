@@ -2,7 +2,7 @@
 
 An interactive, anthology-style Graph RAG murder-mystery game. Pick a cold case, interrogate an AI copilot, and watch the hidden connections between suspects, evidence, and locations wire themselves together on a live investigation graph — until you're ready to name a killer.
 
-**[Live Demo](#)** &middot; 10 cases &middot; built entirely on free-tier infrastructure
+**[Live Demo](https://detectives-web.vercel.app/)** &middot; 10 cases &middot; built entirely on free-tier infrastructure
 
 ---
 
