@@ -89,7 +89,7 @@ export default function SpotlightHero() {
           BUREAU OF UNSOLVED AFFAIRS &nbsp;&middot;&nbsp; EST. 1927 &middot; FILE ROOM OPEN
         </p>
         <p className="text-xs tracking-[0.2em] uppercase text-[#c9b896]/60 mb-6">
-          NINE CASES &middot; ZERO CONFESSIONS
+          Ten CASES &middot; ZERO CONFESSIONS
         </p>
         <h1
           className="text-6xl md:text-7xl font-bold leading-[1.05] mb-6"
