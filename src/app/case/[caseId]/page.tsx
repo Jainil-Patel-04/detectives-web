@@ -8,7 +8,6 @@ import AmbientEffect from '@/components/AmbientEffect';
 import AccusationModal from '@/components/AccusationModal';
 import { getTheme } from '@/lib/themes';  
 import BackButton from '@/components/BackButton';
-import HowItWorks from '@/components/HowItWorks';
 import { getNextOptions, buildCapabilities, type OptionCandidate, type Capabilities } from '@/lib/questionTemplates';
 
 export default function CasePage() {

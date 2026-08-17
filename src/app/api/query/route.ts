@@ -5,7 +5,6 @@ import { buildCypherPrompt } from "@/lib/gemini";
 import { recordsToGraph } from "@/lib/graphMapper";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-// const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
 export async function POST(req: Request) {
   const { question, caseId } = await req.json();
@@ -15,10 +14,9 @@ export async function POST(req: Request) {
     buildCypherPrompt(question, caseId),
   );
   const cypher = cypherResult.response.text().trim();
-  console.log("Generated Cypher:", cypher); // add this
   if (cypher === "NO_QUERY") {
     const chat = await model.generateContent(
-      `You are a noir detective's AI copilot embedded inside a murder-mystery investigation game. You only discuss this specific case \u2014 its suspects, evidence, locations, and events.
+      `You are a noir detective's AI copilot embedded inside a murder-mystery investigation game. You only discuss this specific case its suspects, evidence, locations, and events.
 
       RULES:
       - If the player's message is small talk, a greeting, general knowledge, math, coding help, or anything unrelated to this investigation, do NOT answer it directly. Instead, respond with 1-2 short noir-styled sentences that decline and steer them back toward the case.
