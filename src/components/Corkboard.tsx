@@ -250,17 +250,17 @@ export default function Corkboard({ graphData, theme }: { graphData: any; theme:
   const [, forceRerender] = useState(0);
 
   useEffect(() => {
-    function updateSize() {
-      if (containerRef.current) {
-        setDimensions({
-          width: containerRef.current.offsetWidth,
-          height: containerRef.current.offsetHeight,
-        });
-      }
-    }
-    updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    const el = containerRef.current;
+    if (!el) return;
+
+    const update = () =>
+      setDimensions({ width: el.clientWidth, height: el.clientHeight });
+
+    update(); // measure once immediately
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+
+    return () => observer.disconnect();
   }, []);
 
   // give nodes more breathing room so strings have somewhere to be visible
@@ -273,92 +273,95 @@ export default function Corkboard({ graphData, theme }: { graphData: any; theme:
   }, [graphData.nodes.length]);
 
   return (
-      <ForceGraph2D
-        ref={fgRef}
-        width={dimensions.width}
-        height={dimensions.height}
-        graphData={graphData}
-        backgroundColor="rgba(0,0,0,0)"
-        cooldownTime={6000}
-        nodeCanvasObject={(node: any, ctx, scale) => {
-          const group = (node.group || '').toLowerCase();
-          if (group === 'person') drawPersonNode(ctx, node, theme, scale, () => forceRerender((t) => t + 1));
-          else if (group === 'evidence') drawEvidenceNode(ctx, node, theme, scale);
-          else if (group === 'location') drawLocationNode(ctx, node, theme, scale);
-          else {
-            const alpha = nodeOpacity(node);
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            ctx.fillStyle = theme.nodeColor;
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, 6, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.font = `${10 / scale}px monospace`;
-            ctx.fillStyle = theme.bgSecondary;
-            ctx.textAlign = 'center';
-            ctx.fillText(node.label || node.name || '', node.x, node.y + 14);
-            ctx.restore();
-          }
-        }}
-        nodePointerAreaPaint={(node: any, color, ctx) => {
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, 24, 0, Math.PI * 2);
-          ctx.fill();
-        }}
-        linkCanvasObject={(link: any, ctx) => {
-          const start = link.source;
-          const end = link.target;
-          if (typeof start !== 'object' || typeof end !== 'object') return;
+      <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+          <ForceGraph2D
+            ref={fgRef}
+            width={dimensions.width}
+            height={dimensions.height}
+            graphData={graphData}
+            backgroundColor="rgba(0,0,0,0)"
+            cooldownTime={6000}
+            onEngineStop={() => fgRef.current?.zoomToFit(400, 80)}
+            nodeCanvasObject={(node: any, ctx, scale) => {
+              const group = (node.group || '').toLowerCase();
+              if (group === 'person') drawPersonNode(ctx, node, theme, scale, () => forceRerender((t) => t + 1));
+              else if (group === 'evidence') drawEvidenceNode(ctx, node, theme, scale);
+              else if (group === 'location') drawLocationNode(ctx, node, theme, scale);
+              else {
+                const alpha = nodeOpacity(node);
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = theme.nodeColor;
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.font = `${10 / scale}px monospace`;
+                ctx.fillStyle = theme.bgSecondary;
+                ctx.textAlign = 'center';
+                ctx.fillText(node.label || node.name || '', node.x, node.y + 14);
+                ctx.restore();
+              }
+            }}
+            nodePointerAreaPaint={(node: any, color, ctx) => {
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.arc(node.x, node.y, 24, 0, Math.PI * 2);
+              ctx.fill();
+            }}
+            linkCanvasObject={(link: any, ctx) => {
+              const start = link.source;
+              const end = link.target;
+              if (typeof start !== 'object' || typeof end !== 'object') return;
 
-          const dx = end.x - start.x, dy = end.y - start.y;
-          const dist = Math.hypot(dx, dy) || 1;
-          const ux = dx / dist, uy = dy / dist;
-          const px = -uy, py = ux; // perpendicular unit vector
+              const dx = end.x - start.x, dy = end.y - start.y;
+              const dist = Math.hypot(dx, dy) || 1;
+              const ux = dx / dist, uy = dy / dist;
+              const px = -uy, py = ux; // perpendicular unit vector
 
-          const r1 = nodeRadius(start), r2 = nodeRadius(end);
-          const sx = start.x + ux * r1, sy = start.y + uy * r1;
-          const ex = end.x - ux * r2, ey = end.y - uy * r2;
+              const r1 = nodeRadius(start), r2 = nodeRadius(end);
+              const sx = start.x + ux * r1, sy = start.y + uy * r1;
+              const ex = end.x - ux * r2, ey = end.y - uy * r2;
 
-          const bow = Math.max(15, dist * 0.12);
-          const midX = (sx + ex) / 2 + px * bow;
-          const midY = (sy + ey) / 2 + py * bow;
+              const bow = Math.max(15, dist * 0.12);
+              const midX = (sx + ex) / 2 + px * bow;
+              const midY = (sy + ey) / 2 + py * bow;
 
-          // "epiphany" glow: recently-added links pulse bright, then settle
-          const age = link.__addedAt ? Date.now() - link.__addedAt : Infinity;
-          const glowWindow = 4500;
-          const isRecent = age < glowWindow;
-          const glowStrength = isRecent ? 1 - age / glowWindow : 0;
+              // "epiphany" glow: recently-added links pulse bright, then settle
+              const age = link.__addedAt ? Date.now() - link.__addedAt : Infinity;
+              const glowWindow = 4500;
+              const isRecent = age < glowWindow;
+              const glowStrength = isRecent ? 1 - age / glowWindow : 0;
 
-          ctx.save();
-          if (isRecent) {
-            ctx.strokeStyle = theme.accentSecondary;
-            ctx.lineWidth = 1.6 + glowStrength * 2.5;
-            ctx.shadowColor = theme.accentSecondary;
-            ctx.shadowBlur = 4 + glowStrength * 14;
-          } else {
-            ctx.strokeStyle = `${theme.accent}b0`;
-            ctx.lineWidth = 1.6;
-            ctx.shadowColor = 'rgba(0,0,0,0.35)';
-            ctx.shadowBlur = 2;
-          }
-          ctx.beginPath();
-          ctx.moveTo(sx, sy);
-          ctx.quadraticCurveTo(midX, midY, ex, ey);
-          ctx.stroke();
+              ctx.save();
+              if (isRecent) {
+                ctx.strokeStyle = theme.accentSecondary;
+                ctx.lineWidth = 1.6 + glowStrength * 2.5;
+                ctx.shadowColor = theme.accentSecondary;
+                ctx.shadowBlur = 4 + glowStrength * 14;
+              } else {
+                ctx.strokeStyle = `${theme.accent}b0`;
+                ctx.lineWidth = 1.6;
+                ctx.shadowColor = 'rgba(0,0,0,0.35)';
+                ctx.shadowBlur = 2;
+              }
+              ctx.beginPath();
+              ctx.moveTo(sx, sy);
+              ctx.quadraticCurveTo(midX, midY, ex, ey);
+              ctx.stroke();
 
-          ctx.shadowColor = 'transparent';
-          ctx.fillStyle = isRecent ? theme.accentSecondary : theme.accent;
-          ctx.beginPath();
-          ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.beginPath();
-          ctx.arc(ex, ey, 2.5, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-        }}
-        linkColor={() => 'rgba(0,0,0,0)'}
-        onNodeClick={(node: any) => console.log('clicked node:', node)}
-      />
+              ctx.shadowColor = 'transparent';
+              ctx.fillStyle = isRecent ? theme.accentSecondary : theme.accent;
+              ctx.beginPath();
+              ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.beginPath();
+              ctx.arc(ex, ey, 2.5, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.restore();
+            }}
+            linkColor={() => 'rgba(0,0,0,0)'}
+            onNodeClick={(node: any) => console.log('clicked node:', node)}
+          />
+      </div>
   );
 }
